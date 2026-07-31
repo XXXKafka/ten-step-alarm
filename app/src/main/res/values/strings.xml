@@ -117,4 +117,5 @@
     <string name="clock_fullscreen">全屏背景</string>
     <string name="pomodoro_focus_ringtone">专注铃声</string>
     <string name="pomodoro_break_ringtone">休息铃声</string>
+    <string name="ringing_waiting">闹钟响铃中…</string>
 </resources>

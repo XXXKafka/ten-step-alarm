@@ -94,6 +94,13 @@ class AlarmRingingService : Service() {
             notification,
             ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
         )
+        // Re-assert the full-screen intent (some OEMs drop the first post),
+        // so the ringing page reliably pops up from the background.
+        runCatching {
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE)
+                    as android.app.NotificationManager
+            manager.notify(Notifications.ALARM_NOTIFICATION_ID, notification)
+        }
     }
 
     private fun startSound(alarm: AlarmEntity) {

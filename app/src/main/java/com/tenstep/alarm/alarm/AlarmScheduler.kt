@@ -35,15 +35,16 @@ class AlarmScheduler(private val context: Context) {
         alarmManager.setAlarmClock(info, pi)
     }
 
-    /** Schedules a snooze that fires [minutes] from now. */
+    /**
+     * Schedules a snooze that fires [minutes] from now. Uses setAlarmClock so
+     * the broadcast also gets the temporary background activity-start
+     * allowlist, making the ringing page pop up even from the background.
+     */
     fun scheduleSnooze(alarmId: Long, minutes: Int) {
         if (!canScheduleExact()) return
         val triggerAt = System.currentTimeMillis() + minutes * 60_000L
-        alarmManager.setExactAndAllowWhileIdle(
-            AlarmManager.RTC_WAKEUP,
-            triggerAt,
-            pendingIntent(alarmId, snooze = true)
-        )
+        val pi = pendingIntent(alarmId, snooze = true)
+        alarmManager.setAlarmClock(AlarmManager.AlarmClockInfo(triggerAt, pi), pi)
     }
 
     fun cancel(alarmId: Long) {

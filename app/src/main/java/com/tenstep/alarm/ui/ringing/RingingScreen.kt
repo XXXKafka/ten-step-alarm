@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tenstep.alarm.BuildConfig
@@ -75,15 +76,33 @@ fun RingingScreen(
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
         )
-        Spacer(Modifier.height(40.dp))
+        Spacer(Modifier.height(36.dp))
 
+        // Prominent live step counter: ticks by 1 immediately on every step.
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(
+                text = steps.toString(),
+                style = MaterialTheme.typography.displayLarge,
+                fontWeight = FontWeight.Bold,
+                color = if (satisfied) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = "/ $target",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+        }
+
+        Spacer(Modifier.height(16.dp))
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(20.dp)) {
-                Text(
-                    text = stringResource(R.string.steps_progress, steps, target),
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Spacer(Modifier.height(12.dp))
                 LinearProgressIndicator(
                     progress = { progress },
                     modifier = Modifier.fillMaxWidth()

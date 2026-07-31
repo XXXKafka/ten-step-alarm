@@ -3,6 +3,7 @@ package com.tenstep.alarm.alarm
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.os.PowerManager
 import com.tenstep.alarm.TenStepApplication
 import com.tenstep.alarm.data.AlarmEntity
 import kotlinx.coroutines.CoroutineScope
@@ -12,9 +13,9 @@ import kotlinx.coroutines.launch
 
 /**
  * Fired by AlarmManager when a primary alarm or a snooze is due.
- * Starts the ringing foreground service and (best effort) opens the
- * full-screen ringing activity; the full-screen-intent notification is the
- * fallback that works from the background on all API levels.
+ * Starts the ringing foreground service and force-shows the full-screen
+ * ringing activity (waking the screen even when it is off/locked); the
+ * full-screen-intent notification is the fallback for background launches.
  */
 class AlarmReceiver : BroadcastReceiver() {
 
@@ -54,15 +55,27 @@ class AlarmReceiver : BroadcastReceiver() {
         }
         androidx.core.content.ContextCompat.startForegroundService(context, serviceIntent)
 
-        // Best-effort direct launch (works while the exact-alarm allowlist is
-        // active). The full-screen-intent notification covers the rest.
+        // Force the screen on (even when off/locked) while showing the page.
+        val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+        @Suppress("DEPRECATION")
+        val wakeLock = powerManager.newWakeLock(
+            PowerManager.SCREEN_BRIGHT_WAKE_LOCK or
+                PowerManager.ACQUIRE_CAUSES_WAKEUP or
+                PowerManager.ON_AFTER_RELEASE,
+            "TenStepAlarm:ShowRinging"
+        )
+        runCatching { wakeLock.acquire(8000) }
+
+        // Best-effort direct launch (exact-alarm broadcasts get a temporary
+        // background activity-start allowlist). The full-screen-intent
+        // notification covers the remaining cases.
         try {
             val activity = Intent(context, AlarmRingingActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }
             context.startActivity(activity)
         } catch (_: Exception) {
-            // Background activity start blocked; the notification will show it.
+            // Fallback: the full-screen-intent notification will show it.
         }
     }
 

@@ -67,3 +67,12 @@ dependencies {
 
     debugImplementation(libs.androidx.ui.tooling)
 }
+
+// Name the produced APKs "十步闹钟" (Ten-Step Alarm).
+androidComponents {
+    onVariants { variant ->
+        variant.outputs.forEach { output ->
+            output.outputFileName.set("十步闹钟-${variant.name}.apk")
+        }
+    }
+}

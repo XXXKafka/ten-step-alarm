@@ -109,4 +109,5 @@
     <string name="clock_fullscreen">Fullscreen</string>
     <string name="pomodoro_focus_ringtone">Focus ringtone</string>
     <string name="pomodoro_break_ringtone">Break ringtone</string>
+    <string name="ringing_waiting">Alarm ringing…</string>
 </resources>
