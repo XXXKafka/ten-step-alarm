@@ -16,8 +16,13 @@ import androidx.activity.enableEdgeToEdge
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.tenstep.alarm.ui.navigation.AppRoot
+import androidx.lifecycle.lifecycleScope
+import com.tenstep.alarm.alarm.AlarmMonitorService
+import com.tenstep.alarm.data.SettingsStore
 import com.tenstep.alarm.ui.theme.AppSettingsTheme
 import com.tenstep.alarm.util.LocaleHelper
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -33,6 +38,7 @@ class MainActivity : ComponentActivity() {
         requestIgnoreBatteryOptimizations(this)
 
         val container = (application as TenStepApplication).container
+        startAlarmMonitorIfEnabled(container.settingsStore)
         setContent {
             AppSettingsTheme(settingsStore = container.settingsStore) {
                 AppRoot()
@@ -83,6 +89,15 @@ class MainActivity : ComponentActivity() {
                     )
                     activity.startActivity(intent)
                 }
+            }
+        }
+    }
+
+    /** Starts the alarm guard foreground service when enabled in settings. */
+    private fun startAlarmMonitorIfEnabled(settingsStore: SettingsStore) {
+        lifecycleScope.launch {
+            if (settingsStore.alarmMonitorEnabled.first()) {
+                AlarmMonitorService.start(applicationContext)
             }
         }
     }

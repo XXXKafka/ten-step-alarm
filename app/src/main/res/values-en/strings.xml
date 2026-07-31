@@ -117,4 +117,9 @@
     <string name="xiaomi_autostart">Autostart</string>
     <string name="open_settings">Open settings</string>
     <string name="time_format_title">Time format</string>
+    <string name="notification_channel_monitor">Alarm guard</string>
+    <string name="alarm_monitor_text">Keeps the app running so alarms ring on time</string>
+    <string name="alarm_monitor_setting">Alarm guard (keep running)</string>
+    <string name="alarm_monitor_desc">Prevents alarms from failing after the app is closed from recents (recommended on Xiaomi/Redmi)</string>
+    <string name="alarm_monitor_title">Alarm guard is running</string>
 </resources>

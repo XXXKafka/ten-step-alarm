@@ -1,6 +1,7 @@
 package com.tenstep.alarm.ui.clock
 
 import android.app.Activity
+import android.os.Build
 import android.view.WindowManager
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
@@ -121,6 +122,28 @@ fun FlipClockScreen(onBack: () -> Unit) {
     }
 
     val (timeBackground, timeForeground) = clockColors(style, customColorArgb)
+
+    // Keep the system bar appearance consistent with the page background and
+    // disable the Android 15 contrast scrim, so in fullscreen mode the status
+    // bar area matches the background color exactly.
+    val themeBackground = MaterialTheme.colorScheme.background
+    DisposableEffect(activity, fullscreen, timeBackground, themeBackground) {
+        val window = activity?.window
+        val controller = window?.let { WindowInsetsControllerCompat(it, it.decorView) }
+        val bgIsLight = if (fullscreen) timeBackground.isLight() else themeBackground.isLight()
+        controller?.isAppearanceLightStatusBars = bgIsLight
+        controller?.isAppearanceLightNavigationBars = bgIsLight
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            window?.isStatusBarContrastEnforced = false
+            window?.isNavigationBarContrastEnforced = false
+        }
+        onDispose {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                window?.isStatusBarContrastEnforced = true
+                window?.isNavigationBarContrastEnforced = true
+            }
+        }
+    }
 
     val weekdays = stringArrayResource(R.array.weekday_full)
     val weekday = weekdays[(now.dayOfWeek.value - 1).coerceIn(0, 6)]

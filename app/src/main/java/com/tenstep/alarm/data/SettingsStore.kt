@@ -50,6 +50,7 @@ class SettingsStore(private val context: Context) {
         val SNOOZE_MINUTES = intPreferencesKey("snooze_minutes")
         val DEFAULT_RINGTONE = stringPreferencesKey("default_ringtone")
         val DEBUG_SIMULATE_STEPS = booleanPreferencesKey("debug_simulate_steps")
+        val ALARM_MONITOR_ENABLED = booleanPreferencesKey("alarm_monitor_enabled")
     }
 
     val themeMode: Flow<ThemeMode> = context.dataStore.data.map { prefs ->
@@ -112,6 +113,10 @@ class SettingsStore(private val context: Context) {
 
     val debugSimulateSteps: Flow<Boolean> =
         context.dataStore.data.map { prefs -> prefs[Keys.DEBUG_SIMULATE_STEPS] ?: false }
+
+    /** Keeps the alarm guard foreground service running (see AlarmMonitorService). */
+    val alarmMonitorEnabled: Flow<Boolean> =
+        context.dataStore.data.map { prefs -> prefs[Keys.ALARM_MONITOR_ENABLED] ?: true }
 
     suspend fun setThemeMode(mode: ThemeMode) {
         context.dataStore.edit { it[Keys.THEME_MODE] = mode.name }
@@ -187,6 +192,10 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setDebugSimulateSteps(enabled: Boolean) {
         context.dataStore.edit { it[Keys.DEBUG_SIMULATE_STEPS] = enabled }
+    }
+
+    suspend fun setAlarmMonitorEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.ALARM_MONITOR_ENABLED] = enabled }
     }
 
     private fun defaultAlarmRingtone(): String =

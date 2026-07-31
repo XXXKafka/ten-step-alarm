@@ -92,6 +92,7 @@ fun SettingsScreen() {
     val snoozeMinutes by viewModel.snoozeMinutes.collectAsStateWithLifecycle()
     val debugSimulate by viewModel.debugSimulateSteps.collectAsStateWithLifecycle()
     val defaultRingtone by viewModel.defaultRingtone.collectAsStateWithLifecycle()
+    val alarmMonitorEnabled by viewModel.alarmMonitorEnabled.collectAsStateWithLifecycle()
     val clockFullscreen by viewModel.clockFullscreen.collectAsStateWithLifecycle()
     val pomodoroFocusRingtone by viewModel.pomodoroFocusRingtone.collectAsStateWithLifecycle()
     val pomodoroBreakRingtone by viewModel.pomodoroBreakRingtone.collectAsStateWithLifecycle()
@@ -278,6 +279,21 @@ fun SettingsScreen() {
                 label = stringResource(R.string.clock_24hour),
                 checked = clock24Hour,
                 onCheckedChange = viewModel::setClock24Hour
+            )
+        }
+
+        // Alarm guard (background keep-alive)
+        SettingsCard(title = "") {
+            SwitchRow(
+                label = stringResource(R.string.alarm_monitor_setting),
+                checked = alarmMonitorEnabled,
+                onCheckedChange = viewModel::setAlarmMonitorEnabled
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = stringResource(R.string.alarm_monitor_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 

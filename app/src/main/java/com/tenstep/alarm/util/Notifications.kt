@@ -17,7 +17,9 @@ object Notifications {
 
     const val CHANNEL_ALARM = "alarm_ringing"
     const val CHANNEL_POMODORO = "pomodoro"
+    const val CHANNEL_MONITOR = "alarm_monitor"
     const val ALARM_NOTIFICATION_ID = 1001
+    const val MONITOR_NOTIFICATION_ID = 1002
 
     fun createChannels(context: Context) {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -40,8 +42,18 @@ object Notifications {
         ).apply {
             description = context.getString(R.string.notification_channel_pomodoro)
         }
+        val monitorChannel = NotificationChannel(
+            CHANNEL_MONITOR,
+            context.getString(R.string.notification_channel_monitor),
+            NotificationManager.IMPORTANCE_MIN
+        ).apply {
+            description = context.getString(R.string.notification_channel_monitor)
+            setShowBadge(false)
+            setSound(null, null)
+        }
         manager.createNotificationChannel(alarmChannel)
         manager.createNotificationChannel(pomodoroChannel)
+        manager.createNotificationChannel(monitorChannel)
     }
 
     fun alarmNotification(context: Context, alarm: AlarmEntity, snooze: Boolean): Notification {
@@ -78,6 +90,24 @@ object Notifications {
             .setContentText(text)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
+            .build()
+    }
+
+    /** Low-priority persistent notification for the alarm guard service. */
+    fun monitorNotification(context: Context): Notification {
+        val openIntent = PendingIntent.getActivity(
+            context,
+            0,
+            Intent(context, com.tenstep.alarm.MainActivity::class.java),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        return NotificationCompat.Builder(context, CHANNEL_MONITOR)
+            .setSmallIcon(R.drawable.ic_stat_alarm)
+            .setContentTitle(context.getString(R.string.alarm_monitor_title))
+            .setContentText(context.getString(R.string.alarm_monitor_text))
+            .setOngoing(true)
+            .setSilent(true)
+            .setContentIntent(openIntent)
             .build()
     }
 }

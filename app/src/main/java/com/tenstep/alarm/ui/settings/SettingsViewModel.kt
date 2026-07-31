@@ -8,6 +8,7 @@ import android.provider.Settings
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.tenstep.alarm.TenStepApplication
+import com.tenstep.alarm.alarm.AlarmMonitorService
 import com.tenstep.alarm.data.ThemeMode
 import com.tenstep.alarm.util.LocaleHelper
 import kotlinx.coroutines.flow.SharingStarted
@@ -77,6 +78,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     val defaultRingtone: StateFlow<String> = settings.defaultRingtone
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
+
+    val alarmMonitorEnabled: StateFlow<Boolean> = settings.alarmMonitorEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 
     fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch { settings.setThemeMode(mode) }
@@ -154,6 +158,17 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     fun setDefaultRingtone(uri: String) {
         viewModelScope.launch { settings.setDefaultRingtone(uri) }
+    }
+
+    fun setAlarmMonitorEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settings.setAlarmMonitorEnabled(enabled)
+            if (enabled) {
+                AlarmMonitorService.start(context)
+            } else {
+                AlarmMonitorService.stop(context)
+            }
+        }
     }
 
     fun canScheduleExactAlarms(): Boolean = container.scheduler.canScheduleExact()

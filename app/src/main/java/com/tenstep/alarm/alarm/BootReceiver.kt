@@ -4,6 +4,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.tenstep.alarm.TenStepApplication
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -24,6 +26,10 @@ class BootReceiver : BroadcastReceiver() {
             try {
                 val app = context.applicationContext as TenStepApplication
                 app.container.alarmRepository.rescheduleAll()
+                // Keep the alarm guard running after a reboot (when enabled).
+                if (app.container.settingsStore.alarmMonitorEnabled.first()) {
+                    AlarmMonitorService.start(app)
+                }
             } finally {
                 pendingResult.finish()
             }

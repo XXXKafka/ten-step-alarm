@@ -125,4 +125,9 @@
     <string name="xiaomi_autostart">自启动</string>
     <string name="open_settings">去设置</string>
     <string name="time_format_title">时间格式</string>
+    <string name="notification_channel_monitor">闹钟守护</string>
+    <string name="alarm_monitor_text">保持后台运行，确保闹钟准时响铃</string>
+    <string name="alarm_monitor_setting">闹钟守护（后台常驻）</string>
+    <string name="alarm_monitor_desc">防止从最近任务关闭应用后闹钟无法响铃（小米/红米建议开启）</string>
+    <string name="alarm_monitor_title">闹钟守护运行中</string>
 </resources>
