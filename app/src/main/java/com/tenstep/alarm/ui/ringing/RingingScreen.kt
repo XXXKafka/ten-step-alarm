@@ -153,15 +153,17 @@ fun RingingScreen(
 
         Spacer(Modifier.height(40.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedButton(
-                onClick = {
-                    viewModel.snooze()
-                    onClose()
+            if (current.snoozeEnabled) {
+                OutlinedButton(
+                    onClick = {
+                        viewModel.snooze()
+                        onClose()
+                    }
+                ) {
+                    Text(stringResource(R.string.snooze_action_min, snoozeMinutes))
                 }
-            ) {
-                Text(stringResource(R.string.snooze_action_min, snoozeMinutes))
+                Spacer(Modifier.width(16.dp))
             }
-            Spacer(Modifier.width(16.dp))
             Button(
                 onClick = {
                     viewModel.dismiss()

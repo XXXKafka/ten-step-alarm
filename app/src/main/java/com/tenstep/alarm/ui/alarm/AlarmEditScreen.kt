@@ -1,19 +1,15 @@
 package com.tenstep.alarm.ui.alarm
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-
-
 import android.app.Activity
 import android.content.Intent
 import android.media.RingtoneManager
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,16 +18,18 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -41,10 +39,13 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberTimePickerState
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -56,13 +57,19 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tenstep.alarm.R
 import com.tenstep.alarm.data.RepeatDays
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+/**
+ * Alarm editor styled like the iOS Clock app: a centered title bar with
+ * 取消/保存, and grouped list rows (重复 / 标签 / 铃声 / 音量 / 震动 / 稍后提醒 /
+ * 删除) with chevrons and hairline dividers.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlarmEditScreen(onClose: () -> Unit) {
     val viewModel: AlarmEditViewModel = viewModel()
     val context = LocalContext.current
 
     val isNew by viewModel.isNew.collectAsStateWithLifecycle()
+    val loaded by viewModel.loaded.collectAsStateWithLifecycle()
     val hour by viewModel.hour.collectAsStateWithLifecycle()
     val minute by viewModel.minute.collectAsStateWithLifecycle()
     val days by viewModel.days.collectAsStateWithLifecycle()
@@ -70,8 +77,10 @@ fun AlarmEditScreen(onClose: () -> Unit) {
     val ringtoneUri by viewModel.ringtoneUri.collectAsStateWithLifecycle()
     val volume by viewModel.volume.collectAsStateWithLifecycle()
     val vibrate by viewModel.vibrate.collectAsStateWithLifecycle()
+    val snoozeEnabled by viewModel.snoozeEnabled.collectAsStateWithLifecycle()
 
-    val loaded by viewModel.loaded.collectAsStateWithLifecycle()
+    var showRepeatDialog by remember { mutableStateOf(false) }
+    var showLabelDialog by remember { mutableStateOf(false) }
 
     val ringtoneLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -85,8 +94,7 @@ fun AlarmEditScreen(onClose: () -> Unit) {
     }
 
     // Recreate the picker once the alarm data is loaded so editing an existing
-    // alarm shows its real time instead of the defaults (the branch switch
-    // replaces the remember slot and rebuilds the picker state).
+    // alarm shows its real time instead of the defaults.
     val timeState = if (loaded) {
         rememberTimePickerState(
             initialHour = hour,
@@ -103,20 +111,36 @@ fun AlarmEditScreen(onClose: () -> Unit) {
     LaunchedEffect(timeState.hour) { viewModel.setHour(timeState.hour) }
     LaunchedEffect(timeState.minute) { viewModel.setMinute(timeState.minute) }
 
+    if (showRepeatDialog) {
+        RepeatDialog(
+            days = days,
+            onToggle = viewModel::toggleDay,
+            onDismiss = { showRepeatDialog = false }
+        )
+    }
+    if (showLabelDialog) {
+        LabelDialog(
+            initial = label,
+            onConfirm = viewModel::setLabel,
+            onDismiss = { showLabelDialog = false }
+        )
+    }
+
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
+            CenterAlignedTopAppBar(
                 title = {
                     Text(stringResource(if (isNew) R.string.alarm_add else R.string.alarm_edit))
                 },
                 navigationIcon = {
-                    IconButton(onClick = onClose) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                    TextButton(onClick = onClose) {
+                        Text(stringResource(R.string.cancel))
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.save(onClose) }) {
-                        Icon(Icons.Filled.Check, contentDescription = stringResource(R.string.save))
+                    TextButton(onClick = { viewModel.save(onClose) }) {
+                        Text(stringResource(R.string.save))
                     }
                 }
             )
@@ -130,147 +154,255 @@ fun AlarmEditScreen(onClose: () -> Unit) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Card(Modifier.fillMaxWidth()) {
+            // Time picker card.
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                ),
+                elevation = CardDefaults.cardElevation(0.dp)
+            ) {
                 Column(
-                    Modifier.fillMaxWidth().padding(16.dp),
+                    Modifier.fillMaxWidth().padding(vertical = 8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(
-                        text = stringResource(R.string.edit_time),
-                        style = MaterialTheme.typography.titleMedium
-                    )
                     TimePicker(state = timeState)
                 }
             }
 
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp)) {
-                    Text(
-                        text = stringResource(R.string.edit_repeat),
-                        style = MaterialTheme.typography.titleMedium
+            // Grouped list (iOS style).
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                ),
+                elevation = CardDefaults.cardElevation(0.dp)
+            ) {
+                Column {
+                    AppleListRow(
+                        title = stringResource(R.string.edit_repeat),
+                        subtitle = repeatSummary(days),
+                        onClick = { showRepeatDialog = true }
                     )
-                    Spacer(Modifier.height(12.dp))
-                    val weekdays = stringArrayResource(R.array.weekday_short)
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        RepeatDays.ALL_DAYS_LIST.forEach { bit ->
-                            val selected = days and bit != 0
-                            FilterChip(
-                                selected = selected,
-                                onClick = { viewModel.toggleDay(bit) },
-                                label = {
-                                    Text(weekdays[RepeatDays.indexOf(bit)])
-                                },
-                                leadingIcon = if (selected) {
-                                    {
-                                        Icon(
-                                            Icons.Filled.Check,
-                                            contentDescription = null,
-                                            modifier = Modifier.width(16.dp)
-                                        )
-                                    }
-                                } else null
-                            )
+                    AppleDivider()
+                    AppleListRow(
+                        title = stringResource(R.string.edit_label),
+                        subtitle = label.ifBlank { null },
+                        onClick = { showLabelDialog = true }
+                    )
+                    AppleDivider()
+                    AppleListRow(
+                        title = stringResource(R.string.edit_ringtone),
+                        subtitle = ringtoneLabel(context, ringtoneUri),
+                        onClick = {
+                            ringtoneLauncher.launch(ringtonePickerIntent(context, ringtoneUri))
                         }
-                    }
-                }
-            }
-
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(
-                        value = label,
-                        onValueChange = viewModel::setLabel,
-                        label = { Text(stringResource(R.string.edit_label)) },
-                        placeholder = { Text(stringResource(R.string.edit_label_hint)) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
                     )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+                    AppleDivider()
+                    AppleListRow(
+                        title = stringResource(R.string.edit_volume),
+                        subtitle = "$volume%"
                     ) {
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                text = stringResource(R.string.edit_ringtone),
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                            Text(
-                                text = ringtoneLabel(context, ringtoneUri),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        OutlinedButton(onClick = {
-                            val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
-                                putExtra(
-                                    RingtoneManager.EXTRA_RINGTONE_TYPE,
-                                    RingtoneManager.TYPE_ALARM
-                                )
-                                putExtra(
-                                    RingtoneManager.EXTRA_RINGTONE_TITLE,
-                                    context.getString(R.string.ringtone_picker_title)
-                                )
-                                putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
-                                putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
-                                runCatching {
-                                    putExtra(
-                                        RingtoneManager.EXTRA_RINGTONE_EXISTING_URI,
-                                        Uri.parse(ringtoneUri)
-                                    )
-                                }
-                            }
-                            ringtoneLauncher.launch(intent)
-                        }) {
-                            Text(stringResource(R.string.choose_ringtone))
-                        }
-                    }
-
-                    Column {
-                        Text(
-                            text = stringResource(R.string.edit_volume) + " $volume%",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
                         Slider(
                             value = volume.toFloat(),
                             onValueChange = { viewModel.setVolume(it.toInt()) },
                             valueRange = 0f..100f,
-                            steps = 9
+                            steps = 9,
+                            modifier = Modifier.width(140.dp)
                         )
                     }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+                    AppleDivider()
+                    AppleListRow(
+                        title = stringResource(R.string.edit_vibrate),
+                        onClick = { viewModel.setVibrate(!vibrate) }
                     ) {
-                        Text(
-                            text = stringResource(R.string.edit_vibrate),
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.weight(1f)
-                        )
                         Switch(checked = vibrate, onCheckedChange = viewModel::setVibrate)
+                    }
+                    AppleDivider()
+                    AppleListRow(
+                        title = stringResource(R.string.edit_snooze),
+                        onClick = { viewModel.setSnoozeEnabled(!snoozeEnabled) }
+                    ) {
+                        Switch(
+                            checked = snoozeEnabled,
+                            onCheckedChange = viewModel::setSnoozeEnabled
+                        )
                     }
                 }
             }
 
+            // Delete row (editing only), iOS style: red centered text.
             if (!isNew) {
-                TextButton(
-                    onClick = { viewModel.delete(onClose) },
-                    modifier = Modifier.fillMaxWidth()
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                    ),
+                    elevation = CardDefaults.cardElevation(0.dp)
                 ) {
-                    Icon(
-                        Icons.Filled.Delete,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error
-                    )
-                    Spacer(Modifier.width(8.dp))
                     Text(
                         text = stringResource(R.string.edit_delete),
-                        color = MaterialTheme.colorScheme.error
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.error,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { viewModel.delete(onClose) }
+                            .padding(vertical = 14.dp)
                     )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun AppleListRow(
+    title: String,
+    subtitle: String? = null,
+    onClick: (() -> Unit)? = null,
+    trailing: (@Composable () -> Unit)? = null
+) {
+    val modifier = Modifier
+        .fillMaxWidth()
+        .background(MaterialTheme.colorScheme.surfaceContainerLow)
+        .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+        .padding(horizontal = 16.dp, vertical = 10.dp)
+    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1f)
+        )
+        if (subtitle != null) {
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1
+            )
+            Spacer(Modifier.width(6.dp))
+        }
+        if (onClick != null && trailing == null) {
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        trailing?.invoke()
+    }
+}
+
+@Composable
+private fun AppleDivider() {
+    HorizontalDivider(
+        modifier = Modifier.padding(start = 16.dp),
+        color = MaterialTheme.colorScheme.outlineVariant
+    )
+}
+
+@Composable
+private fun repeatSummary(daysOfWeek: Int): String {
+    val short = stringArrayResource(R.array.weekday_short)
+    val once = stringResource(R.string.repeat_once)
+    val daily = stringResource(R.string.repeat_daily)
+    val workdays = stringResource(R.string.repeat_workdays)
+    return when {
+        daysOfWeek == 0 -> once
+        daysOfWeek == RepeatDays.ALL -> daily
+        daysOfWeek == RepeatDays.WORKDAYS -> workdays
+        else -> RepeatDays.ALL_DAYS_LIST
+            .filter { daysOfWeek and it != 0 }
+            .joinToString(" ") { short[RepeatDays.indexOf(it)] }
+    }
+}
+
+@Composable
+private fun RepeatDialog(
+    days: Int,
+    onToggle: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val weekdays = stringArrayResource(R.array.weekday_full)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.edit_repeat)) },
+        text = {
+            Column {
+                RepeatDays.ALL_DAYS_LIST.forEach { bit ->
+                    val checked = days and bit != 0
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onToggle(bit) }
+                            .padding(vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = weekdays[RepeatDays.indexOf(bit)],
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Checkbox(checked = checked, onCheckedChange = { onToggle(bit) })
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.ok)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+        }
+    )
+}
+
+@Composable
+private fun LabelDialog(
+    initial: String,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var text by remember { mutableStateOf(initial) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.edit_label)) },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                singleLine = true,
+                placeholder = { Text(stringResource(R.string.edit_label_hint)) }
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(text.trim()); onDismiss() }) {
+                Text(stringResource(R.string.ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+        }
+    )
+}
+
+private fun ringtonePickerIntent(
+    context: android.content.Context,
+    existingUri: String
+): Intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
+    putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_ALARM)
+    putExtra(
+        RingtoneManager.EXTRA_RINGTONE_TITLE,
+        context.getString(R.string.ringtone_picker_title)
+    )
+    putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+    putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
+    runCatching {
+        putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, Uri.parse(existingUri))
     }
 }
 

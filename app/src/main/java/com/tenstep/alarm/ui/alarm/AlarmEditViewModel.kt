@@ -7,8 +7,6 @@ import androidx.lifecycle.viewModelScope
 import com.tenstep.alarm.TenStepApplication
 import com.tenstep.alarm.data.AlarmEntity
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -31,6 +29,7 @@ class AlarmEditViewModel(
     val ringtoneUri = MutableStateFlow("")
     val volume = MutableStateFlow(70)
     val vibrate = MutableStateFlow(true)
+    val snoozeEnabled = MutableStateFlow(true)
 
     init {
         viewModelScope.launch {
@@ -43,6 +42,7 @@ class AlarmEditViewModel(
                     ringtoneUri.value = alarm.ringtoneUri
                     volume.value = alarm.volume
                     vibrate.value = alarm.vibrate
+                    snoozeEnabled.value = alarm.snoozeEnabled
                 }
             } else {
                 ringtoneUri.value = settings.defaultRingtone.first()
@@ -62,6 +62,7 @@ class AlarmEditViewModel(
     fun setRingtone(uri: String) { ringtoneUri.value = uri }
     fun setVolume(value: Int) { volume.value = value.coerceIn(0, 100) }
     fun setVibrate(value: Boolean) { vibrate.value = value }
+    fun setSnoozeEnabled(value: Boolean) { snoozeEnabled.value = value }
 
     fun save(onSaved: () -> Unit) {
         viewModelScope.launch {
@@ -75,6 +76,7 @@ class AlarmEditViewModel(
                 ringtoneUri = uri,
                 volume = volume.value,
                 vibrate = vibrate.value,
+                snoozeEnabled = snoozeEnabled.value,
                 enabled = true,
                 oneShot = days.value == 0
             )

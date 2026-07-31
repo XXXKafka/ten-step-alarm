@@ -460,6 +460,26 @@ fun SettingsScreen() {
             }
         }
 
+        // Xiaomi / MIUI background permission guide
+        if (viewModel.isXiaomi()) {
+            SettingsCard(title = stringResource(R.string.background_permissions_title)) {
+                BackgroundButtonRow(
+                    label = stringResource(R.string.xiaomi_autostart),
+                    onOpen = viewModel::openXiaomiAutostart
+                )
+                Spacer(Modifier.height(8.dp))
+                BackgroundButtonRow(
+                    label = stringResource(R.string.xiaomi_background_popup),
+                    onOpen = viewModel::openXiaomiBackgroundPopup
+                )
+                Spacer(Modifier.height(8.dp))
+                BackgroundButtonRow(
+                    label = stringResource(R.string.battery_optimization),
+                    onOpen = viewModel::openBatteryOptimizationSettings
+                )
+            }
+        }
+
         // Debug section (debug builds only)
         if (BuildConfig.DEBUG) {
             SettingsCard(title = "") {
@@ -710,5 +730,25 @@ private fun buildRingtonePickerIntent(
     putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
     runCatching {
         putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, Uri.parse(existingUri))
+    }
+}
+
+@Composable
+private fun BackgroundButtonRow(
+    label: String,
+    onOpen: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f)
+        )
+        OutlinedButton(onClick = onOpen) {
+            Text(stringResource(R.string.open_settings))
+        }
     }
 }

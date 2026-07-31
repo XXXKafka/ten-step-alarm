@@ -33,8 +33,10 @@ class RingingViewModel(application: Application) : AndroidViewModel(application)
     fun snooze() {
         viewModelScope.launch {
             val alarm = RingingSession.alarm.value ?: return@launch
-            val minutes = container.settingsStore.snoozeMinutes.first()
-            container.scheduler.scheduleSnooze(alarm.id, minutes)
+            if (alarm.snoozeEnabled) {
+                val minutes = container.settingsStore.snoozeMinutes.first()
+                container.scheduler.scheduleSnooze(alarm.id, minutes)
+            }
             AlarmRingingService.stop(appContext)
         }
     }

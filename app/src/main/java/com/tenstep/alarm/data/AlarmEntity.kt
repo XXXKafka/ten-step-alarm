@@ -36,6 +36,7 @@ data class AlarmEntity(
     /** Ringtone volume scale, 0..100. */
     val volume: Int,
     val vibrate: Boolean,
+    val snoozeEnabled: Boolean = true,
     val enabled: Boolean,
     val oneShot: Boolean,
     val createdAt: Long = System.currentTimeMillis()

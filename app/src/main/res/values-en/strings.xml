@@ -110,4 +110,10 @@
     <string name="pomodoro_focus_ringtone">Focus ringtone</string>
     <string name="pomodoro_break_ringtone">Break ringtone</string>
     <string name="ringing_waiting">Alarm ringing…</string>
+    <string name="battery_optimization">Ignore battery optimization</string>
+    <string name="edit_snooze">Snooze</string>
+    <string name="background_permissions_title">Background permissions (Xiaomi)</string>
+    <string name="xiaomi_background_popup">Background pop-up</string>
+    <string name="xiaomi_autostart">Autostart</string>
+    <string name="open_settings">Open settings</string>
 </resources>

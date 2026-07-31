@@ -118,4 +118,10 @@
     <string name="pomodoro_focus_ringtone">专注铃声</string>
     <string name="pomodoro_break_ringtone">休息铃声</string>
     <string name="ringing_waiting">闹钟响铃中…</string>
+    <string name="battery_optimization">忽略电池优化</string>
+    <string name="edit_snooze">稍后提醒</string>
+    <string name="background_permissions_title">后台运行权限（小米）</string>
+    <string name="xiaomi_background_popup">后台弹出界面</string>
+    <string name="xiaomi_autostart">自启动</string>
+    <string name="open_settings">去设置</string>
 </resources>

@@ -76,6 +76,16 @@ class AlarmRingingService : Service() {
         startVibration(alarm)
         acquireWakeLock()
 
+        // Second chance to bring the ringing page to the front. Some OEMs
+        // (e.g. Xiaomi MIUI/HyperOS) block the receiver-side start; starting
+        // from the foreground service context works more reliably there.
+        runCatching {
+            val activity = Intent(this, AlarmRingingActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            startActivity(activity)
+        }
+
         val gate = StepGate(this)
         stepGate = gate
         RingingSession.activeGate = gate

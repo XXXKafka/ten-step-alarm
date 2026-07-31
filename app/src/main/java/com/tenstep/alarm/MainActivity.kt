@@ -3,9 +3,13 @@ package com.tenstep.alarm
 import android.Manifest
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -26,6 +30,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         requestNotificationPermissionIfNeeded(this)
         requestActivityRecognitionIfNeeded(this)
+        requestIgnoreBatteryOptimizations(this)
 
         val container = (application as TenStepApplication).container
         setContent {
@@ -61,6 +66,23 @@ class MainActivity : ComponentActivity() {
                     arrayOf(Manifest.permission.ACTIVITY_RECOGNITION),
                     REQUEST_ACTIVITY_RECOGNITION
                 )
+            }
+        }
+    }
+
+    /** Ask for the battery optimization exemption (helps exact alarms & the
+     *  ringing service survive Doze / aggressive OEM battery savers). */
+    private fun requestIgnoreBatteryOptimizations(activity: Activity) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val powerManager = activity.getSystemService(Context.POWER_SERVICE) as PowerManager
+            if (!powerManager.isIgnoringBatteryOptimizations(activity.packageName)) {
+                runCatching {
+                    val intent = Intent(
+                        Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                        Uri.parse("package:${activity.packageName}")
+                    )
+                    activity.startActivity(intent)
+                }
             }
         }
     }
