@@ -116,4 +116,5 @@
     <string name="xiaomi_background_popup">Background pop-up</string>
     <string name="xiaomi_autostart">Autostart</string>
     <string name="open_settings">Open settings</string>
+    <string name="time_format_title">Time format</string>
 </resources>

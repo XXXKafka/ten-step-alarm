@@ -272,6 +272,15 @@ fun SettingsScreen() {
             }
         }
 
+        // Time format (shared by the alarm editor wheels and the flip clock)
+        SettingsCard(title = stringResource(R.string.time_format_title)) {
+            SwitchRow(
+                label = stringResource(R.string.clock_24hour),
+                checked = clock24Hour,
+                onCheckedChange = viewModel::setClock24Hour
+            )
+        }
+
         // Pomodoro durations
         SettingsCard(title = "") {
             Text(
@@ -343,11 +352,6 @@ fun SettingsScreen() {
                 label = stringResource(R.string.clock_show_date),
                 checked = clockShowDate,
                 onCheckedChange = viewModel::setClockShowDate
-            )
-            SwitchRow(
-                label = stringResource(R.string.clock_24hour),
-                checked = clock24Hour,
-                onCheckedChange = viewModel::setClock24Hour
             )
             Spacer(Modifier.height(12.dp))
             Text(
@@ -568,7 +572,10 @@ private fun SwitchRow(
     onCheckedChange: (Boolean) -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!checked) }
+            .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(

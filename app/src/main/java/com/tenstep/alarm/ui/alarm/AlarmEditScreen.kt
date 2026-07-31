@@ -47,6 +47,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -87,6 +88,7 @@ fun AlarmEditScreen(onClose: () -> Unit) {
     val volume by viewModel.volume.collectAsStateWithLifecycle()
     val vibrate by viewModel.vibrate.collectAsStateWithLifecycle()
     val snoozeEnabled by viewModel.snoozeEnabled.collectAsStateWithLifecycle()
+    val is24Hour by viewModel.is24Hour.collectAsStateWithLifecycle()
 
     var showRepeatDialog by remember { mutableStateOf(false) }
     var showLabelDialog by remember { mutableStateOf(false) }
@@ -161,6 +163,7 @@ fun AlarmEditScreen(onClose: () -> Unit) {
                 TimeWheelPicker(
                     hour = wheelHour,
                     minute = wheelMinute,
+                    is24Hour = is24Hour,
                     onHourChange = viewModel::setHour,
                     onMinuteChange = viewModel::setMinute,
                     modifier = Modifier
@@ -266,38 +269,73 @@ fun AlarmEditScreen(onClose: () -> Unit) {
 private fun TimeWheelPicker(
     hour: Int,
     minute: Int,
+    is24Hour: Boolean,
     onHourChange: (Int) -> Unit,
     onMinuteChange: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val hours = remember { (0..23).map { it.toString().padStart(2, '0') } }
+    val hours24 = remember { (0..23).map { it.toString().padStart(2, '0') } }
+    val hours12 = remember { (1..12).map { it.toString().padStart(2, '0') } }
     val minutes = remember { (0..59).map { it.toString().padStart(2, '0') } }
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center
-    ) {
-        WheelColumn(
-            items = hours,
-            initialIndex = hour.coerceIn(0, 23),
-            onSelected = onHourChange,
-            modifier = Modifier.weight(1f)
-        )
-        Text(
-            text = ":",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        WheelColumn(
-            items = minutes,
-            initialIndex = minute.coerceIn(0, 59),
-            onSelected = onMinuteChange,
-            modifier = Modifier.weight(1f)
-        )
+    val amPmOptions = listOf(
+        stringResource(R.string.am_label),
+        stringResource(R.string.pm_label)
+    )
+    val displayHour = if (is24Hour) hour else hour12Value(hour)
+    val amPm = if (is24Hour) 0 else if (hour < 12) 0 else 1
+
+    fun to24(index: Int, amPmIndex: Int): Int {
+        val h12 = index + 1 // 1..12
+        return if (amPmIndex == 0) h12 % 12 else (h12 % 12) + 12
+    }
+
+    key(is24Hour) {
+        Row(
+            modifier = modifier,
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            WheelColumn(
+                items = if (is24Hour) hours24 else hours12,
+                initialIndex = if (is24Hour) {
+                    hour.coerceIn(0, 23)
+                } else {
+                    (displayHour - 1).coerceIn(0, 11)
+                },
+                onSelected = { idx ->
+                    if (is24Hour) onHourChange(idx) else onHourChange(to24(idx, amPm))
+                },
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = ":",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            WheelColumn(
+                items = minutes,
+                initialIndex = minute.coerceIn(0, 59),
+                onSelected = onMinuteChange,
+                modifier = Modifier.weight(1f)
+            )
+            if (!is24Hour) {
+                Spacer(Modifier.width(8.dp))
+                WheelColumn(
+                    items = amPmOptions,
+                    initialIndex = amPm,
+                    onSelected = { idx -> onHourChange(to24(displayHour - 1, idx)) },
+                    modifier = Modifier.width(64.dp)
+                )
+            }
+        }
     }
 }
 
+private fun hour12Value(hour: Int): Int {
+    val h = hour % 12
+    return if (h == 0) 12 else h
+}
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun WheelColumn(

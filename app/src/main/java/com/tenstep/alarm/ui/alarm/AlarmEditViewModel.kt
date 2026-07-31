@@ -7,7 +7,10 @@ import androidx.lifecycle.viewModelScope
 import com.tenstep.alarm.TenStepApplication
 import com.tenstep.alarm.data.AlarmEntity
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class AlarmEditViewModel(
@@ -30,6 +33,10 @@ class AlarmEditViewModel(
     val volume = MutableStateFlow(70)
     val vibrate = MutableStateFlow(true)
     val snoozeEnabled = MutableStateFlow(true)
+
+    /** Follows the global "24-hour format" setting (shared with the clock). */
+    val is24Hour: StateFlow<Boolean> = settings.clock24Hour
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 
     init {
         viewModelScope.launch {

@@ -124,4 +124,5 @@
     <string name="xiaomi_background_popup">后台弹出界面</string>
     <string name="xiaomi_autostart">自启动</string>
     <string name="open_settings">去设置</string>
+    <string name="time_format_title">时间格式</string>
 </resources>
