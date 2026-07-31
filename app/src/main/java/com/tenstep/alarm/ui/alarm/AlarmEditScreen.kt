@@ -6,10 +6,14 @@ import android.media.RingtoneManager
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,6 +21,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -31,36 +38,38 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TimePicker
-import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tenstep.alarm.R
 import com.tenstep.alarm.data.RepeatDays
+import kotlin.math.abs
 
 /**
- * Alarm editor styled like the iOS Clock app: a centered title bar with
- * 取消/保存, and grouped list rows (重复 / 标签 / 铃声 / 音量 / 震动 / 稍后提醒 /
- * 删除) with chevrons and hairline dividers.
+ * Alarm editor styled like the iOS Clock app: centered title bar (取消/保存),
+ * an hour/minute scroll-wheel time picker, and grouped list rows (重复 / 标签 /
+ * 铃声 / 音量 / 震动 / 稍后提醒 / 删除) with chevrons and hairline dividers.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,24 +101,6 @@ fun AlarmEditScreen(onClose: () -> Unit) {
             uri?.toString()?.let { viewModel.setRingtone(it) }
         }
     }
-
-    // Recreate the picker once the alarm data is loaded so editing an existing
-    // alarm shows its real time instead of the defaults.
-    val timeState = if (loaded) {
-        rememberTimePickerState(
-            initialHour = hour,
-            initialMinute = minute,
-            is24Hour = true
-        )
-    } else {
-        rememberTimePickerState(
-            initialHour = 7,
-            initialMinute = 0,
-            is24Hour = true
-        )
-    }
-    LaunchedEffect(timeState.hour) { viewModel.setHour(timeState.hour) }
-    LaunchedEffect(timeState.minute) { viewModel.setMinute(timeState.minute) }
 
     if (showRepeatDialog) {
         RepeatDialog(
@@ -154,7 +145,7 @@ fun AlarmEditScreen(onClose: () -> Unit) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Time picker card.
+            // iOS-style scroll-wheel time picker.
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp),
@@ -163,12 +154,19 @@ fun AlarmEditScreen(onClose: () -> Unit) {
                 ),
                 elevation = CardDefaults.cardElevation(0.dp)
             ) {
-                Column(
-                    Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    TimePicker(state = timeState)
-                }
+                // Rebuild the wheels once the alarm data is loaded so editing
+                // an existing alarm starts from its real time.
+                val wheelHour = if (loaded) hour else 7
+                val wheelMinute = if (loaded) minute else 0
+                TimeWheelPicker(
+                    hour = wheelHour,
+                    minute = wheelMinute,
+                    onHourChange = viewModel::setHour,
+                    onMinuteChange = viewModel::setMinute,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp)
+                )
             }
 
             // Grouped list (iOS style).
@@ -247,13 +245,130 @@ fun AlarmEditScreen(onClose: () -> Unit) {
                         text = stringResource(R.string.edit_delete),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.error,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        textAlign = TextAlign.Center,
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { viewModel.delete(onClose) }
                             .padding(vertical = 14.dp)
                     )
                 }
+            }
+        }
+    }
+}
+
+/**
+ * iOS-style time wheels: hour (0-23) and minute (0-59) scroll vertically and
+ * snap to the center row; the centered value is highlighted and selected.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun TimeWheelPicker(
+    hour: Int,
+    minute: Int,
+    onHourChange: (Int) -> Unit,
+    onMinuteChange: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val hours = remember { (0..23).map { it.toString().padStart(2, '0') } }
+    val minutes = remember { (0..59).map { it.toString().padStart(2, '0') } }
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        WheelColumn(
+            items = hours,
+            initialIndex = hour.coerceIn(0, 23),
+            onSelected = onHourChange,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            text = ":",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        WheelColumn(
+            items = minutes,
+            initialIndex = minute.coerceIn(0, 59),
+            onSelected = onMinuteChange,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun WheelColumn(
+    items: List<String>,
+    initialIndex: Int,
+    onSelected: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val itemHeight = 52.dp
+    val visibleCount = 5
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = initialIndex)
+    var centerIndex by remember { mutableStateOf(initialIndex) }
+
+    // Track which item is currently centered and report it live.
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.layoutInfo }
+            .collect { layout ->
+                val itemsInfo = layout.visibleItemsInfo
+                if (itemsInfo.isNotEmpty()) {
+                    val centerY = (layout.viewportStartOffset + layout.viewportEndOffset) / 2f
+                    val closest = itemsInfo.minByOrNull {
+                        abs((it.offset + it.size / 2f) - centerY)
+                    }
+                    closest?.let {
+                        if (centerIndex != it.index) {
+                            centerIndex = it.index
+                            onSelected(it.index)
+                        }
+                    }
+                }
+            }
+    }
+
+    Box(
+        modifier = modifier.height(itemHeight * visibleCount),
+        contentAlignment = Alignment.Center
+    ) {
+        // Center selection band (drawn behind the text).
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(itemHeight)
+                .background(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                    shape = RoundedCornerShape(14.dp)
+                )
+        )
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(vertical = itemHeight * (visibleCount / 2)),
+            flingBehavior = rememberSnapFlingBehavior(lazyListState = listState),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            itemsIndexed(items) { index, value ->
+                val centered = index == centerIndex
+                Text(
+                    text = value,
+                    fontSize = if (centered) 28.sp else 18.sp,
+                    fontWeight = if (centered) FontWeight.Bold else FontWeight.Normal,
+                    color = if (centered) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(itemHeight)
+                )
             }
         }
     }
