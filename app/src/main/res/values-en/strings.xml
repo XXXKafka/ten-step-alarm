@@ -36,7 +36,7 @@
     <string name="steps_progress">%1$d / %2$d steps</string>
     <string name="steps_remaining">%1$d more steps</string>
     <string name="steps_done">Done! You can dismiss the alarm now.</string>
-    <string name="step_hint">Pick up your phone and walk 10 steps to dismiss</string>
+    <string name="step_hint">Pick up your phone and walk to dismiss</string>
     <string name="step_mode_accelerometer">Step counter unavailable; estimating steps with the accelerometer</string>
     <string name="step_mode_unavailable">No step sensor detected; the alarm cannot be dismissed yet</string>
     <string name="snooze_action">Snooze</string>
@@ -90,6 +90,7 @@
     <string name="am_label">AM</string>
     <string name="clock_show_date">Show date</string>
     <string name="clock_settings">Flip clock</string>
+    <string name="theme_color_mono">Monochrome</string>
     <string name="theme_color_dynamic">Dynamic</string>
     <string name="ok">OK</string>
     <string name="color_lightness">Lightness</string>
@@ -122,4 +123,39 @@
     <string name="alarm_monitor_setting">Alarm guard (keep running)</string>
     <string name="alarm_monitor_desc">Prevents alarms from failing after the app is closed from recents (recommended on Xiaomi/Redmi)</string>
     <string name="alarm_monitor_title">Alarm guard is running</string>
+    <string name="tab_timer">Timer</string>
+    <string name="tab_stopwatch">Stopwatch</string>
+
+    <string name="edit_challenge">Challenge</string>
+    <string name="challenge_steps">Steps</string>
+    <string name="challenge_steps_desc">Walk the target steps to dismiss</string>
+    <string name="challenge_math">Math</string>
+    <string name="challenge_math_desc">Solve one arithmetic problem to dismiss</string>
+    <string name="challenge_shake">Shake</string>
+    <string name="challenge_shake_desc">Shake the phone the target times to dismiss</string>
+    <string name="challenge_qr">QR code</string>
+    <string name="challenge_steps_target">Step target</string>
+    <string name="theme_amoled">AMOLED</string>
+    <string name="math_question_hint">Solve the problem to dismiss the alarm</string>
+    <string name="math_submit">Check</string>
+    <string name="math_wrong">Wrong answer, try again</string>
+    <string name="challenge_preparing">Preparing…</string>
+    <string name="shake_hint">Shake your phone %1$d more times</string>
+    <string name="shake_unavailable">No accelerometer detected; shake challenge unavailable</string>
+    <string name="qr_hint">Point any QR code at the viewfinder</string>
+    <string name="qr_camera_permission_needed">Camera permission is needed to scan</string>
+    <string name="qr_request_camera">Grant camera permission</string>
+    <string name="qr_fallback_note">If the camera is unavailable, you can also walk the steps to dismiss</string>
+    <string name="qr_scanned">QR scanned! You can dismiss the alarm now</string>
+    <string name="simulate_progress">Simulate +10 (debug)</string>
+
+    <string name="notification_channel_timer">Timer reminders</string>
+    <string name="timer_notification_title">Timer</string>
+    <string name="timer_done_text">Time\'s up!</string>
+    <string name="timer_minutes_format">%1$d min</string>
+    <string name="timer_custom">Custom</string>
+    <string name="timer_custom_minutes">Custom minutes (1-180)</string>
+    <string name="timer_minutes_unit">min</string>
+    <string name="stopwatch_lap">Lap</string>
+    <string name="stopwatch_lap_number">#%1$d</string>
 </resources>

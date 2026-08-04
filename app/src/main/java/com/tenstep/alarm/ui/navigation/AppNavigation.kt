@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Alarm
+import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Timer
@@ -31,10 +32,12 @@ import com.tenstep.alarm.ui.alarm.AlarmListScreen
 import com.tenstep.alarm.ui.clock.FlipClockScreen
 import com.tenstep.alarm.ui.pomodoro.PomodoroScreen
 import com.tenstep.alarm.ui.settings.SettingsScreen
+import com.tenstep.alarm.timer.TimerScreen
 
 object Routes {
     const val HOME = "home"
     const val POMODORO = "pomodoro"
+    const val TIMER = "timer"
     const val CLOCK = "clock"
     const val SETTINGS = "settings"
     const val ALARM_EDIT = "alarm_edit"
@@ -66,12 +69,21 @@ fun AppRoot() {
             }
         }
     ) { innerPadding ->
+        // The fullscreen clock owns the whole screen: it must draw behind
+        // the status/navigation bars so its background (including the status
+        // bar area) matches the flip-clock color instead of the app theme.
+        val contentModifier = if (currentRoute == Routes.CLOCK) {
+            Modifier.fillMaxSize()
+        } else {
+            Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        }
+
         NavHost(
             navController = navController,
             startDestination = Routes.HOME,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
+            modifier = contentModifier
         ) {
             composable(Routes.HOME) {
                 AlarmListScreen(
@@ -86,6 +98,7 @@ fun AppRoot() {
                 AlarmEditScreen(onClose = { navController.popBackStack() })
             }
             composable(Routes.POMODORO) { PomodoroScreen() }
+            composable(Routes.TIMER) { TimerScreen() }
             composable(Routes.CLOCK) {
                 FlipClockScreen(onBack = { navController.popBackStack() })
             }
@@ -99,6 +112,7 @@ private fun AppBottomBar(navController: NavHostController, currentRoute: String?
     val items = listOf(
         BottomItem(Routes.HOME, R.string.tab_alarm, Icons.Filled.Alarm),
         BottomItem(Routes.POMODORO, R.string.tab_pomodoro, Icons.Filled.Timer),
+        BottomItem(Routes.TIMER, R.string.tab_timer, Icons.Filled.HourglassEmpty),
         BottomItem(Routes.CLOCK, R.string.tab_clock, Icons.Filled.Schedule),
         BottomItem(Routes.SETTINGS, R.string.tab_settings, Icons.Filled.Settings)
     )

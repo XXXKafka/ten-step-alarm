@@ -40,7 +40,7 @@
     <string name="steps_progress">已走 %1$d / %2$d 步</string>
     <string name="steps_remaining">还差 %1$d 步</string>
     <string name="steps_done">已达标，可以关闭闹钟了</string>
-    <string name="step_hint">请拿起手机走动 10 步后再关闭</string>
+    <string name="step_hint">请拿起手机走动后再关闭</string>
     <string name="step_mode_accelerometer">计步传感器不可用，已使用加速度计估算步数</string>
     <string name="step_mode_unavailable">未检测到可用计步传感器，暂时无法关闭</string>
     <string name="snooze_action">稍后提醒</string>
@@ -98,6 +98,7 @@
     <string name="am_label">上午</string>
     <string name="clock_show_date">显示日期</string>
     <string name="clock_settings">翻页时钟</string>
+    <string name="theme_color_mono">黑白灰</string>
     <string name="theme_color_dynamic">动态取色</string>
     <string name="ok">确定</string>
     <string name="color_lightness">明度</string>
@@ -130,4 +131,41 @@
     <string name="alarm_monitor_setting">闹钟守护（后台常驻）</string>
     <string name="alarm_monitor_desc">防止从最近任务关闭应用后闹钟无法响铃（小米/红米建议开启）</string>
     <string name="alarm_monitor_title">闹钟守护运行中</string>
+    <string name="tab_timer">计时器</string>
+    <string name="tab_stopwatch">秒表</string>
+
+    <!-- Challenges -->
+    <string name="edit_challenge">挑战</string>
+    <string name="challenge_steps">步数挑战</string>
+    <string name="challenge_steps_desc">走满目标步数即可关闭</string>
+    <string name="challenge_math">数学题</string>
+    <string name="challenge_math_desc">答对一道算术题即可关闭</string>
+    <string name="challenge_shake">摇晃手机</string>
+    <string name="challenge_shake_desc">用力摇晃手机达到次数即可关闭</string>
+    <string name="challenge_qr">扫码</string>
+    <string name="challenge_steps_target">目标步数</string>
+    <string name="theme_amoled">纯黑（AMOLED）</string>
+    <string name="math_question_hint">答对下面的题目即可关闭闹钟</string>
+    <string name="math_submit">确认</string>
+    <string name="math_wrong">答案不对，再试试</string>
+    <string name="challenge_preparing">准备挑战…</string>
+    <string name="shake_hint">请用力摇晃手机，还差 %1$d 次</string>
+    <string name="shake_unavailable">未检测到加速度传感器，无法完成摇晃挑战</string>
+    <string name="qr_hint">请将任意二维码对准取景框</string>
+    <string name="qr_camera_permission_needed">需要相机权限才能扫码</string>
+    <string name="qr_request_camera">授予相机权限</string>
+    <string name="qr_fallback_note">无法使用相机时，也可走满步数关闭</string>
+    <string name="qr_scanned">已扫码，可以关闭闹钟了</string>
+    <string name="simulate_progress">模拟 +10（调试）</string>
+
+    <!-- Timer -->
+    <string name="notification_channel_timer">计时器提醒</string>
+    <string name="timer_notification_title">计时器</string>
+    <string name="timer_done_text">时间到！</string>
+    <string name="timer_minutes_format">%1$d 分钟</string>
+    <string name="timer_custom">自定义</string>
+    <string name="timer_custom_minutes">自定义分钟数（1-180）</string>
+    <string name="timer_minutes_unit">分钟</string>
+    <string name="stopwatch_lap">计次</string>
+    <string name="stopwatch_lap_number">#%1$d</string>
 </resources>

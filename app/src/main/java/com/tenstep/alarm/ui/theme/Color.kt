@@ -24,6 +24,9 @@ val DarkSurfaceContainer = Color(0xFF252928)
 /** Default seed color (teal). */
 val TealPrimary = Color(0xFF006A60)
 
+/** Neutral gray seed used by the default monochrome theme. */
+val MonoSeed = Color(0xFF444444)
+
 /**
  * Curated seed colors for the "Preset" theme color picker.
  * Each seed is expanded into a full light/dark Material 3 scheme.

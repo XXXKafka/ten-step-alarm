@@ -29,6 +29,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -53,6 +54,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringArrayResource
@@ -64,6 +66,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tenstep.alarm.R
+import com.tenstep.alarm.data.ChallengeType
 import com.tenstep.alarm.data.RepeatDays
 import kotlin.math.abs
 
@@ -88,10 +91,13 @@ fun AlarmEditScreen(onClose: () -> Unit) {
     val volume by viewModel.volume.collectAsStateWithLifecycle()
     val vibrate by viewModel.vibrate.collectAsStateWithLifecycle()
     val snoozeEnabled by viewModel.snoozeEnabled.collectAsStateWithLifecycle()
+    val challengeType by viewModel.challengeType.collectAsStateWithLifecycle()
+    val stepTarget by viewModel.stepTarget.collectAsStateWithLifecycle()
     val is24Hour by viewModel.is24Hour.collectAsStateWithLifecycle()
 
     var showRepeatDialog by remember { mutableStateOf(false) }
     var showLabelDialog by remember { mutableStateOf(false) }
+    var showChallengeDialog by remember { mutableStateOf(false) }
 
     val ringtoneLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -116,6 +122,15 @@ fun AlarmEditScreen(onClose: () -> Unit) {
             initial = label,
             onConfirm = viewModel::setLabel,
             onDismiss = { showLabelDialog = false }
+        )
+    }
+    if (showChallengeDialog) {
+        ChallengeDialog(
+            type = challengeType,
+            stepTarget = stepTarget,
+            onTypeChange = viewModel::setChallengeType,
+            onStepTargetChange = viewModel::setStepTarget,
+            onDismiss = { showChallengeDialog = false }
         )
     }
 
@@ -163,6 +178,7 @@ fun AlarmEditScreen(onClose: () -> Unit) {
                 TimeWheelPicker(
                     hour = wheelHour,
                     minute = wheelMinute,
+                    loaded = loaded,
                     is24Hour = is24Hour,
                     onHourChange = viewModel::setHour,
                     onMinuteChange = viewModel::setMinute,
@@ -223,6 +239,12 @@ fun AlarmEditScreen(onClose: () -> Unit) {
                     }
                     AppleDivider()
                     AppleListRow(
+                        title = stringResource(R.string.edit_challenge),
+                        subtitle = challengeSummary(challengeType),
+                        onClick = { showChallengeDialog = true }
+                    )
+                    AppleDivider()
+                    AppleListRow(
                         title = stringResource(R.string.edit_snooze),
                         onClick = { viewModel.setSnoozeEnabled(!snoozeEnabled) }
                     ) {
@@ -269,6 +291,7 @@ fun AlarmEditScreen(onClose: () -> Unit) {
 private fun TimeWheelPicker(
     hour: Int,
     minute: Int,
+    loaded: Boolean,
     is24Hour: Boolean,
     onHourChange: (Int) -> Unit,
     onMinuteChange: (Int) -> Unit,
@@ -289,7 +312,7 @@ private fun TimeWheelPicker(
         return if (amPmIndex == 0) h12 % 12 else (h12 % 12) + 12
     }
 
-    key(is24Hour) {
+    key(is24Hour, loaded) {
         Row(
             modifier = modifier,
             verticalAlignment = Alignment.CenterVertically,
@@ -566,4 +589,91 @@ private fun ringtoneLabel(context: android.content.Context, uri: String): String
         RingtoneManager.getRingtone(context, Uri.parse(uri))
     }.getOrNull()
     return ringtone?.getTitle(context) ?: stringResource(R.string.ringtone_default)
+}
+
+@Composable
+private fun challengeSummary(type: ChallengeType): String = when (type) {
+    ChallengeType.STEPS -> stringResource(R.string.challenge_steps)
+    ChallengeType.MATH -> stringResource(R.string.challenge_math)
+    ChallengeType.SHAKE -> stringResource(R.string.challenge_shake)
+    ChallengeType.QR -> stringResource(R.string.challenge_qr)
+}
+
+@Composable
+private fun ChallengeDialog(
+    type: ChallengeType,
+    stepTarget: Int,
+    onTypeChange: (ChallengeType) -> Unit,
+    onStepTargetChange: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.edit_challenge)) },
+        text = {
+            Column {
+                listOf(
+                    Triple(ChallengeType.STEPS, R.string.challenge_steps, R.string.challenge_steps_desc),
+                    Triple(ChallengeType.MATH, R.string.challenge_math, R.string.challenge_math_desc),
+                    Triple(ChallengeType.SHAKE, R.string.challenge_shake, R.string.challenge_shake_desc)
+                ).forEach { (value, labelRes, descRes) ->
+                    val selected = type == value
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(
+                                if (selected) {
+                                    MaterialTheme.colorScheme.primaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceContainerLow
+                                }
+                            )
+                            .clickable { onTypeChange(value) }
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(labelRes),
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            Text(
+                                text = stringResource(descRes),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        if (selected) {
+                            Icon(
+                                Icons.Filled.Check,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(6.dp))
+                }
+                if (type == ChallengeType.STEPS) {
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        text = stringResource(R.string.challenge_steps_target) + ": $stepTarget",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Slider(
+                        value = stepTarget.toFloat(),
+                        onValueChange = { onStepTargetChange(it.toInt()) },
+                        valueRange = 1f..100f,
+                        steps = 98
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.ok)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+        }
+    )
 }

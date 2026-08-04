@@ -24,6 +24,21 @@ object RepeatDays {
     fun indexOf(bit: Int): Int = Integer.numberOfTrailingZeros(bit)
 }
 
+/**
+ * How the user must prove they are awake before the alarm can be dismissed.
+ * [ChallengeType.QR] requires the camera + ML Kit barcode scanning; when the
+ * ringing UI cannot use the camera it falls back to step counting so the alarm
+ * can always be dismissed.
+ */
+enum class ChallengeType {
+    STEPS, MATH, SHAKE, QR;
+
+    companion object {
+        /** Default number of steps for a [ChallengeType.STEPS] alarm. */
+        const val DEFAULT_STEP_TARGET = 10
+    }
+}
+
 @Entity(tableName = "alarms")
 data class AlarmEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0L,
@@ -39,7 +54,11 @@ data class AlarmEntity(
     val snoozeEnabled: Boolean = true,
     val enabled: Boolean,
     val oneShot: Boolean,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    /** Challenge required before the alarm can be dismissed. */
+    val challengeType: ChallengeType = ChallengeType.STEPS,
+    /** Step target when [challengeType] is STEPS (or the QR fallback). */
+    val stepTarget: Int = ChallengeType.DEFAULT_STEP_TARGET
 ) {
     /** True when the alarm was created without any repeating weekday. */
     fun isOneTime(): Boolean = oneShot || daysOfWeek == 0

@@ -12,6 +12,12 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Step counting (TYPE_STEP_COUNTER on Android 10+). -->
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <!-- Play the default alarm sound on Xiaomi/MIUI, which stores it behind a
+         media URI that needs the audio permission. -->
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
 
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
@@ -19,6 +25,10 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- QR-challenge camera scanning. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Camera is optional: QR challenge falls back to steps without it. -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <application
         android:name=".TenStepApplication"
@@ -38,12 +48,15 @@
             </intent-filter>
         </activity>
 
-        <!-- Full-screen ringing UI, shown above the lock screen. -->
+        <!-- Full-screen ringing UI, shown above the lock screen. It runs in
+             its own task (singleInstance) so a lock-screen launch never joins
+             the main activity's background task, which HyperOS/MIUI would
+             otherwise keep hidden behind the keyguard. -->
         <activity
             android:name=".alarm.AlarmRingingActivity"
             android:exported="false"
             android:excludeFromRecents="true"
-            android:launchMode="singleTask"
+            android:launchMode="singleInstance"
             android:showWhenLocked="true"
             android:turnScreenOn="true"
             android:theme="@style/Theme.TenStepAlarm" />
@@ -78,5 +91,20 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+
+        <!-- Re-schedules all alarms once the exact-alarm permission is granted. -->
+        <receiver
+            android:name=".alarm.ExactAlarmPermissionReceiver"
+            android:exported="true"
+            android:permission="android.permission.SCHEDULE_EXACT_ALARM">
+            <intent-filter>
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Fires the timer end notification (sound) even when the app is closed. -->
+        <receiver
+            android:name=".timer.TimerReceiver"
+            android:exported="false" />
     </application>
 </manifest>

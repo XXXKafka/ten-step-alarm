@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -15,8 +16,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AlarmOff
+import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DirectionsWalk
+import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -27,6 +34,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -35,6 +43,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tenstep.alarm.R
 import com.tenstep.alarm.data.AlarmEntity
+import com.tenstep.alarm.data.ChallengeType
 import com.tenstep.alarm.data.RepeatDays
 
 @Composable
@@ -61,7 +70,17 @@ fun AlarmListScreen(
             }
             if (alarms.isEmpty()) {
                 item {
-                    Box(Modifier.fillMaxWidth().padding(top = 64.dp), contentAlignment = Alignment.Center) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(top = 96.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            Icons.Filled.AlarmOff,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(64.dp)
+                        )
+                        Spacer(Modifier.height(16.dp))
                         Text(
                             text = stringResource(R.string.no_alarms),
                             style = MaterialTheme.typography.bodyLarge,
@@ -87,7 +106,14 @@ private fun AlarmCard(
     onClick: () -> Unit,
     onDelete: () -> Unit
 ) {
-    Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        ),
+        elevation = CardDefaults.cardElevation(0.dp)
+    ) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
@@ -115,10 +141,25 @@ private fun AlarmCard(
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                Icon(
+                    imageVector = challengeIcon(alarm.challengeType),
+                    contentDescription = null,
+                    tint = if (alarm.enabled) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(Modifier.width(6.dp))
                 Text(
                     text = RepeatSummaryText(alarm.daysOfWeek),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = if (alarm.enabled) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
                     modifier = Modifier.weight(1f)
                 )
                 IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
@@ -132,6 +173,13 @@ private fun AlarmCard(
             }
         }
     }
+}
+
+private fun challengeIcon(type: ChallengeType): ImageVector = when (type) {
+    ChallengeType.STEPS -> Icons.Filled.DirectionsWalk
+    ChallengeType.MATH -> Icons.Filled.Calculate
+    ChallengeType.SHAKE -> Icons.Filled.Vibration
+    ChallengeType.QR -> Icons.Filled.QrCodeScanner
 }
 
 @Composable

@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.tenstep.alarm.TenStepApplication
+import com.tenstep.alarm.data.SettingsStore
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -26,7 +27,7 @@ class ClockViewModel(application: Application) : AndroidViewModel(application) {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "auto")
 
     val customColorArgb: StateFlow<Long> = settings.clockCustomColor
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0xFF006A60L)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsStore.DEFAULT_ACCENT_ARGB)
 
     val fontScale: StateFlow<Float> = settings.clockFontScale
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 1f)

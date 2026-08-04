@@ -1,6 +1,7 @@
 package com.tenstep.alarm.alarm
 
 import android.content.Context
+import androidx.activity.addCallback
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
@@ -61,6 +62,14 @@ class AlarmRingingActivity : ComponentActivity() {
             WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
                 WindowManager.LayoutParams.FLAG_FULLSCREEN
         )
+        // Some OEMs (MIUI/HyperOS) only honor the legacy window flags, so set
+        // them explicitly in addition to setShowWhenLocked/setTurnScreenOn.
+        @Suppress("DEPRECATION")
+        window.addFlags(
+            WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
+                WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD
+        )
 
         // Immersive mode for the ringing UI.
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -68,6 +77,11 @@ class AlarmRingingActivity : ComponentActivity() {
             hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
             systemBarsBehavior =
                 WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
+
+        // Keep ringing; the alarm must be dismissed via the buttons.
+        onBackPressedDispatcher.addCallback(this) {
+            // Intentionally empty: back must not dismiss the ringing alarm.
         }
 
         val container = (application as TenStepApplication).container
@@ -92,10 +106,6 @@ class AlarmRingingActivity : ComponentActivity() {
                 }
             }
         }
-    }
-
-    override fun onBackPressed() {
-        // Keep ringing; the alarm must be dismissed via the buttons.
     }
 }
 

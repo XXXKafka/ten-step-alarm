@@ -18,8 +18,10 @@ object Notifications {
     const val CHANNEL_ALARM = "alarm_ringing"
     const val CHANNEL_POMODORO = "pomodoro"
     const val CHANNEL_MONITOR = "alarm_monitor"
+    const val CHANNEL_TIMER = "timer"
     const val ALARM_NOTIFICATION_ID = 1001
     const val MONITOR_NOTIFICATION_ID = 1002
+    const val TIMER_NOTIFICATION_ID = 1003
 
     fun createChannels(context: Context) {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -51,16 +53,30 @@ object Notifications {
             setShowBadge(false)
             setSound(null, null)
         }
+        val timerChannel = NotificationChannel(
+            CHANNEL_TIMER,
+            context.getString(R.string.notification_channel_timer),
+            NotificationManager.IMPORTANCE_DEFAULT
+        ).apply {
+            description = context.getString(R.string.notification_channel_timer)
+            setShowBadge(false)
+            enableVibration(true)
+        }
         manager.createNotificationChannel(alarmChannel)
         manager.createNotificationChannel(pomodoroChannel)
         manager.createNotificationChannel(monitorChannel)
+        manager.createNotificationChannel(timerChannel)
     }
 
     fun alarmNotification(context: Context, alarm: AlarmEntity, snooze: Boolean): Notification {
         val fullScreenIntent = PendingIntent.getActivity(
             context,
             0,
-            Intent(context, AlarmRingingActivity::class.java),
+            Intent(context, AlarmRingingActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
+            },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val timeText = LocalTime.of(alarm.hour, alarm.minute)
@@ -80,6 +96,7 @@ object Notifications {
             .setOngoing(true)
             .setAutoCancel(false)
             .setFullScreenIntent(fullScreenIntent, true)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .build()
     }
 
@@ -87,6 +104,17 @@ object Notifications {
         return NotificationCompat.Builder(context, CHANNEL_POMODORO)
             .setSmallIcon(R.drawable.ic_stat_alarm)
             .setContentTitle(context.getString(R.string.pomodoro_notification_title))
+            .setContentText(text)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .build()
+    }
+
+    /** Timer end notification: plays the default sound and auto-cancels. */
+    fun timerNotification(context: Context, text: String): Notification {
+        return NotificationCompat.Builder(context, CHANNEL_TIMER)
+            .setSmallIcon(R.drawable.ic_stat_alarm)
+            .setContentTitle(context.getString(R.string.timer_notification_title))
             .setContentText(text)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)

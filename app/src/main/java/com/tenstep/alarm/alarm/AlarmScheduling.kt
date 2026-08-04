@@ -9,18 +9,30 @@ import com.tenstep.alarm.data.AlarmEntity
 import java.time.ZonedDateTime
 
 /**
+ * Scheduling contract used by [AlarmRepository]. Abstracted so repository
+ * logic can be unit-tested with a fake scheduler.
+ */
+interface AlarmScheduling {
+    fun schedule(alarm: AlarmEntity)
+    fun scheduleSnooze(alarmId: Long, minutes: Int)
+    fun cancel(alarmId: Long)
+    fun canScheduleExact(): Boolean
+}
+
+/**
  * Thin wrapper around AlarmManager.
  *
  * Primary alarms use [AlarmManager.setAlarmClock] (exact, shows the alarm icon
  * in the status bar and gets a temporary process allowlist when it fires).
- * Snooze alarms use setExactAndAllowWhileIdle.
+ * Snooze alarms also use setAlarmClock on purpose: the allowlist makes the
+ * ringing page pop up reliably even on aggressive OEMs (MIUI/HyperOS).
  */
-class AlarmScheduler(private val context: Context) {
+class AlarmScheduler(private val context: Context) : AlarmScheduling {
 
     private val alarmManager =
         context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
-    fun schedule(alarm: AlarmEntity) {
+    override fun schedule(alarm: AlarmEntity) {
         if (!alarm.enabled) return
         if (!canScheduleExact()) return
         val trigger = NextTriggerCalculator.nextTrigger(
@@ -35,24 +47,19 @@ class AlarmScheduler(private val context: Context) {
         alarmManager.setAlarmClock(info, pi)
     }
 
-    /**
-     * Schedules a snooze that fires [minutes] from now. Uses setAlarmClock so
-     * the broadcast also gets the temporary background activity-start
-     * allowlist, making the ringing page pop up even from the background.
-     */
-    fun scheduleSnooze(alarmId: Long, minutes: Int) {
+    override fun scheduleSnooze(alarmId: Long, minutes: Int) {
         if (!canScheduleExact()) return
         val triggerAt = System.currentTimeMillis() + minutes * 60_000L
         val pi = pendingIntent(alarmId, snooze = true)
         alarmManager.setAlarmClock(AlarmManager.AlarmClockInfo(triggerAt, pi), pi)
     }
 
-    fun cancel(alarmId: Long) {
+    override fun cancel(alarmId: Long) {
         alarmManager.cancel(pendingIntent(alarmId, snooze = false))
         alarmManager.cancel(pendingIntent(alarmId, snooze = true))
     }
 
-    fun canScheduleExact(): Boolean {
+    override fun canScheduleExact(): Boolean {
         return Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
             alarmManager.canScheduleExactAlarms()
     }
@@ -63,7 +70,9 @@ class AlarmScheduler(private val context: Context) {
             putExtra(AlarmReceiver.EXTRA_ALARM_ID, alarmId)
             putExtra(AlarmReceiver.EXTRA_SNOOZE, snooze)
         }
-        val requestCode = (alarmId and 0xFFFFF).toInt()
+        // Snooze gets the next code so it can never collide with the main alarm
+        // (or with another alarm id that shares the lower 19 bits).
+        val requestCode = ((alarmId and 0x7FFFF) * 2 + if (snooze) 1 else 0).toInt()
         return PendingIntent.getBroadcast(
             context,
             requestCode,

@@ -3,13 +3,9 @@ package com.tenstep.alarm
 import android.Manifest
 import android.app.Activity
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.PowerManager
-import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -17,11 +13,9 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.tenstep.alarm.ui.navigation.AppRoot
 import androidx.lifecycle.lifecycleScope
-import com.tenstep.alarm.alarm.AlarmMonitorService
 import com.tenstep.alarm.data.SettingsStore
 import com.tenstep.alarm.ui.theme.AppSettingsTheme
 import com.tenstep.alarm.util.LocaleHelper
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -35,10 +29,18 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         requestNotificationPermissionIfNeeded(this)
         requestActivityRecognitionIfNeeded(this)
-        requestIgnoreBatteryOptimizations(this)
+        requestAudioReadPermissionIfNeeded(this)
 
         val container = (application as TenStepApplication).container
-        startAlarmMonitorIfEnabled(container.settingsStore)
+
+        // If the exact-alarm permission is available, re-assert every enabled
+        // alarm (covers the case where it was granted while the app was closed).
+        lifecycleScope.launch {
+            if (container.scheduler.canScheduleExact()) {
+                container.alarmRepository.rescheduleAll()
+            }
+        }
+
         setContent {
             AppSettingsTheme(settingsStore = container.settingsStore) {
                 AppRoot()
@@ -61,6 +63,28 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * Xiaomi/MIUI stores the default alarm sound behind a media URI that the
+     * app can only open with the audio read permission; without it, alarms
+     * using the default ringtone would ring silently on those devices.
+     */
+    private fun requestAudioReadPermissionIfNeeded(activity: Activity) {
+        val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            Manifest.permission.READ_MEDIA_AUDIO
+        } else {
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+        if (ContextCompat.checkSelfPermission(activity, permission) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                activity,
+                arrayOf(permission),
+                REQUEST_AUDIO_READ
+            )
+        }
+    }
+
     private fun requestActivityRecognitionIfNeeded(activity: Activity) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             if (ContextCompat.checkSelfPermission(
@@ -76,34 +100,9 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** Ask for the battery optimization exemption (helps exact alarms & the
-     *  ringing service survive Doze / aggressive OEM battery savers). */
-    private fun requestIgnoreBatteryOptimizations(activity: Activity) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val powerManager = activity.getSystemService(Context.POWER_SERVICE) as PowerManager
-            if (!powerManager.isIgnoringBatteryOptimizations(activity.packageName)) {
-                runCatching {
-                    val intent = Intent(
-                        Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                        Uri.parse("package:${activity.packageName}")
-                    )
-                    activity.startActivity(intent)
-                }
-            }
-        }
-    }
-
-    /** Starts the alarm guard foreground service when enabled in settings. */
-    private fun startAlarmMonitorIfEnabled(settingsStore: SettingsStore) {
-        lifecycleScope.launch {
-            if (settingsStore.alarmMonitorEnabled.first()) {
-                AlarmMonitorService.start(applicationContext)
-            }
-        }
-    }
-
     companion object {
         private const val REQUEST_NOTIFICATIONS = 100
         private const val REQUEST_ACTIVITY_RECOGNITION = 101
+        private const val REQUEST_AUDIO_READ = 102
     }
 }

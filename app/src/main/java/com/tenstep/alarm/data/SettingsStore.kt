@@ -1,6 +1,7 @@
 package com.tenstep.alarm.data
 
 import android.content.Context
+import android.os.Build
 import android.media.RingtoneManager
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -14,7 +15,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-enum class ThemeMode { SYSTEM, LIGHT, DARK }
+enum class ThemeMode { SYSTEM, LIGHT, DARK, AMOLED }
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
@@ -22,8 +23,8 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 class SettingsStore(private val context: Context) {
 
     companion object {
-        /** Default accent color used by the custom color settings (teal). */
-        const val DEFAULT_ACCENT_ARGB: Long = 0xFF006A60L
+        /** Default accent color used by the custom color settings (neutral gray). */
+        const val DEFAULT_ACCENT_ARGB: Long = 0xFF444444L
     }
 
     private object Keys {
@@ -60,7 +61,7 @@ class SettingsStore(private val context: Context) {
     }
 
     val themeColorSource: Flow<String> =
-        context.dataStore.data.map { prefs -> prefs[Keys.THEME_COLOR_SOURCE] ?: "dynamic" }
+        context.dataStore.data.map { prefs -> prefs[Keys.THEME_COLOR_SOURCE] ?: "mono" }
 
     val themePresetIndex: Flow<Int> =
         context.dataStore.data.map { prefs -> prefs[Keys.THEME_PRESET_INDEX] ?: 0 }
@@ -116,7 +117,13 @@ class SettingsStore(private val context: Context) {
 
     /** Keeps the alarm guard foreground service running (see AlarmMonitorService). */
     val alarmMonitorEnabled: Flow<Boolean> =
-        context.dataStore.data.map { prefs -> prefs[Keys.ALARM_MONITOR_ENABLED] ?: true }
+        context.dataStore.data.map { prefs -> prefs[Keys.ALARM_MONITOR_ENABLED] ?: isXiaomi() }
+
+    /** True on Xiaomi / Redmi devices (MIUI / HyperOS). */
+    fun isXiaomi(): Boolean {
+        val manufacturer = Build.MANUFACTURER.lowercase()
+        return manufacturer.contains("xiaomi") || manufacturer.contains("redmi")
+    }
 
     suspend fun setThemeMode(mode: ThemeMode) {
         context.dataStore.edit { it[Keys.THEME_MODE] = mode.name }

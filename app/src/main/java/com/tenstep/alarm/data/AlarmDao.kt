@@ -19,6 +19,9 @@ interface AlarmDao {
     @Query("SELECT * FROM alarms WHERE enabled = 1")
     suspend fun getEnabled(): List<AlarmEntity>
 
+    @Query("SELECT COUNT(*) FROM alarms WHERE enabled = 1")
+    fun observeEnabledCount(): Flow<Int>
+
     @Insert
     suspend fun insert(alarm: AlarmEntity): Long
 

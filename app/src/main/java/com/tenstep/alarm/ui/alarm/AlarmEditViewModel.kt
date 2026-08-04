@@ -1,11 +1,18 @@
 package com.tenstep.alarm.ui.alarm
 
 import android.app.Application
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.os.PowerManager
+import android.provider.Settings
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.tenstep.alarm.TenStepApplication
 import com.tenstep.alarm.data.AlarmEntity
+import com.tenstep.alarm.data.ChallengeType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -33,6 +40,8 @@ class AlarmEditViewModel(
     val volume = MutableStateFlow(70)
     val vibrate = MutableStateFlow(true)
     val snoozeEnabled = MutableStateFlow(true)
+    val challengeType = MutableStateFlow(ChallengeType.STEPS)
+    val stepTarget = MutableStateFlow(ChallengeType.DEFAULT_STEP_TARGET)
 
     /** Follows the global "24-hour format" setting (shared with the clock). */
     val is24Hour: StateFlow<Boolean> = settings.clock24Hour
@@ -50,6 +59,8 @@ class AlarmEditViewModel(
                     volume.value = alarm.volume
                     vibrate.value = alarm.vibrate
                     snoozeEnabled.value = alarm.snoozeEnabled
+                    challengeType.value = alarm.challengeType
+                    stepTarget.value = alarm.stepTarget
                 }
             } else {
                 ringtoneUri.value = settings.defaultRingtone.first()
@@ -70,6 +81,10 @@ class AlarmEditViewModel(
     fun setVolume(value: Int) { volume.value = value.coerceIn(0, 100) }
     fun setVibrate(value: Boolean) { vibrate.value = value }
     fun setSnoozeEnabled(value: Boolean) { snoozeEnabled.value = value }
+    fun setChallengeType(value: ChallengeType) { challengeType.value = value }
+    fun setStepTarget(value: Int) {
+        stepTarget.value = value.coerceIn(1, 100)
+    }
 
     fun save(onSaved: () -> Unit) {
         viewModelScope.launch {
@@ -85,9 +100,20 @@ class AlarmEditViewModel(
                 vibrate = vibrate.value,
                 snoozeEnabled = snoozeEnabled.value,
                 enabled = true,
-                oneShot = days.value == 0
+                oneShot = days.value == 0,
+                challengeType = challengeType.value,
+                stepTarget = if (challengeType.value == ChallengeType.STEPS) {
+                    stepTarget.value
+                } else {
+                    ChallengeType.DEFAULT_STEP_TARGET
+                }
             )
             repository.upsert(alarm)
+            if (alarmId == 0L) {
+                // First alarm creation: ask once for the battery-optimization
+                // exemption (helps exact alarms survive Doze/OEM battery savers).
+                promptBatteryOptimizationIfNeeded()
+            }
             onSaved()
         }
     }
@@ -96,6 +122,20 @@ class AlarmEditViewModel(
         viewModelScope.launch {
             repository.getAlarm(alarmId)?.let { repository.delete(it) }
             onDeleted()
+        }
+    }
+
+    private fun promptBatteryOptimizationIfNeeded() {
+        val app = getApplication<Application>()
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
+        val powerManager = app.getSystemService(Context.POWER_SERVICE) as PowerManager
+        if (powerManager.isIgnoringBatteryOptimizations(app.packageName)) return
+        runCatching {
+            val intent = Intent(
+                Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                Uri.parse("package:${app.packageName}")
+            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            app.startActivity(intent)
         }
     }
 }

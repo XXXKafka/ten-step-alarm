@@ -1,6 +1,6 @@
 package com.tenstep.alarm.data
 
-import com.tenstep.alarm.alarm.AlarmScheduler
+import com.tenstep.alarm.alarm.AlarmScheduling
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -9,10 +9,13 @@ import kotlinx.coroutines.flow.Flow
  */
 class AlarmRepository(
     private val dao: AlarmDao,
-    private val scheduler: AlarmScheduler
+    private val scheduler: AlarmScheduling
 ) {
 
     fun observeAlarms(): Flow<List<AlarmEntity>> = dao.observeAll()
+
+    /** Number of currently enabled alarms (drives the alarm guard service). */
+    fun observeEnabledCount(): Flow<Int> = dao.observeEnabledCount()
 
     suspend fun getAlarm(id: Long): AlarmEntity? = dao.getById(id)
 
@@ -47,7 +50,7 @@ class AlarmRepository(
         scheduler.schedule(alarm)
     }
 
-    /** Recreate all enabled alarms (used after reboot). */
+    /** Recreate all enabled alarms (used after reboot / permission changes). */
     suspend fun rescheduleAll() {
         dao.getEnabled().forEach { alarm ->
             scheduler.cancel(alarm.id)

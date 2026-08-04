@@ -1,14 +1,13 @@
 package com.tenstep.alarm.ui.clock
 
-import android.app.Activity
 import android.os.Build
+import androidx.activity.compose.LocalActivity
 import android.view.WindowManager
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,7 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -40,11 +39,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -70,7 +67,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun FlipClockScreen(onBack: () -> Unit) {
     val viewModel: ClockViewModel = viewModel()
-    val activity = LocalContext.current as? Activity
+    val activity = LocalActivity.current
     val view = LocalView.current
 
     val showSeconds by viewModel.showSeconds.collectAsStateWithLifecycle()
@@ -160,17 +157,42 @@ fun FlipClockScreen(onBack: () -> Unit) {
                 detectTapGestures { overlayVisible = !overlayVisible }
             }
     ) {
-        // The time is always strictly centered on the screen.
-        TimeDisplay(
-            now = now,
-            showSeconds = showSeconds,
-            is24Hour = is24Hour,
-            fontScale = fontScale,
-            background = timeBackground,
-            foreground = timeForeground,
-            fullscreen = fullscreen,
-            modifier = Modifier.align(Alignment.Center)
-        )
+        // Flip-clock digits, always strictly centered on the screen.
+        if (fullscreen) {
+            FlipClockDisplay(
+                now = now,
+                showSeconds = showSeconds,
+                is24Hour = is24Hour,
+                fontScale = fontScale,
+                face = timeBackground,
+                digitColor = timeForeground,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .fillMaxSize()
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(timeBackground)
+                    .padding(vertical = 24.dp)
+            ) {
+                FlipClockDisplay(
+                    now = now,
+                    showSeconds = showSeconds,
+                    is24Hour = is24Hour,
+                    fontScale = fontScale,
+                    face = timeBackground,
+                    digitColor = timeForeground,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(220.dp)
+                )
+            }
+        }
 
         // Date (part of the overlay; auto-hides with it).
         AnimatedVisibility(
@@ -189,7 +211,9 @@ fun FlipClockScreen(onBack: () -> Unit) {
         // Overlay controls.
         AnimatedVisibility(
             visible = overlayVisible,
-            modifier = Modifier.align(Alignment.TopStart)
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .statusBarsPadding()
         ) {
             IconButton(onClick = onBack) {
                 Icon(
@@ -202,7 +226,9 @@ fun FlipClockScreen(onBack: () -> Unit) {
 
         AnimatedVisibility(
             visible = overlayVisible,
-            modifier = Modifier.align(Alignment.TopEnd)
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .statusBarsPadding()
         ) {
             Row {
                 IconButton(onClick = { viewModel.setFullscreen(!fullscreen) }) {
@@ -227,85 +253,6 @@ fun FlipClockScreen(onBack: () -> Unit) {
                         }
                     )
                 }
-            }
-        }
-    }
-}
-
-/**
- * Renders the time as plain characters. The size is adaptive: it always fits
- * within the screen with a margin from every edge. In [fullscreen] mode the
- * text is drawn directly on the page background (no card).
- */
-@Composable
-private fun TimeDisplay(
-    now: LocalDateTime,
-    showSeconds: Boolean,
-    is24Hour: Boolean,
-    fontScale: Float,
-    background: Color,
-    foreground: Color,
-    fullscreen: Boolean,
-    modifier: Modifier = Modifier
-) {
-    val rawHour = now.hour
-    val hour12 = rawHour % 12
-    val displayHour = if (is24Hour) rawHour else if (hour12 == 0) 12 else hour12
-    val timeText = buildString {
-        append(displayHour.toString().padStart(2, '0'))
-        append(':')
-        append(now.minute.toString().padStart(2, '0'))
-        if (showSeconds) {
-            append(':')
-            append(now.second.toString().padStart(2, '0'))
-        }
-    }
-    val amPm = if (!is24Hour) {
-        if (rawHour < 12) stringResource(R.string.am_label) else stringResource(R.string.pm_label)
-    } else {
-        null
-    }
-
-    BoxWithConstraints(modifier) {
-        // Keep a comfortable margin from the nearest screen edge.
-        val margin = 24.dp
-        val charCount = timeText.length + (if (amPm != null) 3 else 0)
-        val widthBudget = (maxWidth - margin * 2) / (charCount * 0.62f)
-        val heightBudget = (maxHeight - margin * 2) / 1.8f
-        val baseSize = minOf(widthBudget, heightBudget)
-        val timeFontSize = with(LocalDensity.current) { (baseSize * fontScale).toSp() }
-
-        val content: @Composable () -> Unit = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = timeText,
-                    fontSize = timeFontSize,
-                    fontWeight = FontWeight.Bold,
-                    color = foreground,
-                    maxLines = 1
-                )
-                if (amPm != null) {
-                    Spacer(Modifier.width(baseSize * 0.2f * fontScale))
-                    Text(
-                        text = amPm,
-                        fontSize = timeFontSize * 0.32f,
-                        fontWeight = FontWeight.Bold,
-                        color = foreground
-                    )
-                }
-            }
-        }
-
-        if (fullscreen) {
-            content()
-        } else {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(background)
-                    .padding(horizontal = baseSize * 0.35f, vertical = baseSize * 0.22f)
-            ) {
-                content()
             }
         }
     }

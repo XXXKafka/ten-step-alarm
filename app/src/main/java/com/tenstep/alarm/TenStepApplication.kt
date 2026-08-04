@@ -2,6 +2,13 @@ package com.tenstep.alarm
 
 import android.app.Application
 import android.content.Context
+import com.tenstep.alarm.alarm.AlarmMonitorService
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
 import com.tenstep.alarm.alarm.AlarmScheduler
 import com.tenstep.alarm.data.AlarmDatabase
 import com.tenstep.alarm.data.AlarmRepository
@@ -23,10 +30,26 @@ class TenStepApplication : Application() {
         super.attachBaseContext(LocaleHelper.apply(base))
     }
 
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this)
         Notifications.createChannels(this)
+
+        // Smart alarm guard: keep the foreground service running only while the
+        // user enabled it AND at least one alarm is enabled.
+        appScope.launch {
+            combine(
+                container.settingsStore.alarmMonitorEnabled,
+                container.alarmRepository.observeEnabledCount()
+            ) { enabled, count -> enabled && count > 0 }
+                .distinctUntilChanged()
+                .collect { shouldRun ->
+                    if (shouldRun) AlarmMonitorService.start(this@TenStepApplication)
+                    else AlarmMonitorService.stop(this@TenStepApplication)
+                }
+        }
     }
 }
 
