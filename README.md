@@ -2,7 +2,7 @@
 
 一个用 **Kotlin + Jetpack Compose + Material 3** 编写的 Android 闹钟应用（个人/侧载使用），核心卖点是**响铃后必须完成挑战才能关闭**，并附带番茄钟、计时器/秒表、翻页时钟等工具。
 
-**当前版本**：1.1.0（versionCode 2）
+**当前版本**：1.1.1（versionCode 3）
 
 ## 功能总览
 

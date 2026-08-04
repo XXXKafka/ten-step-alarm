@@ -9,3 +9,7 @@ captures/
 .externalNativeBuild
 .cxx
 dist/
+
+# Release signing (never commit)
+keystore.properties
+keystore/
